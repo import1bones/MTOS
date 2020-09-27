@@ -5,7 +5,7 @@ know *memory structure* is important for system,which memory can be allocated,wh
 
 	+----------+ <-0X FFFF FFFC
 	|up to 4GB |
-	|		   |
+	|	   |
 	\/\/\/\/\/\/
 
 	/\/\/\/\/\/\
