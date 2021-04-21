@@ -3,7 +3,7 @@
 //manager memory unit
 // & 0X3FF -> & 00000000 00000000 00001111 11111111(bin) 32 bits ,
 //which & with 0X3FF,which's high 20 bits set to zero and low 12 bits hold.
-#define PAGE_NUMBER(linear_address)	(((uintptr_t) (linear_address)) >> PTXSHIFT)
+#define PAGE_NUMBER(linear_address) (((uintptr_t) (linear_address)) >> PTXSHIFT)
 
 #define PAGE_DIRECTORY_INDEX(linear_address) ((((uintptr_t) (linear_address)) >> PDXSHIFT) & 0X3FF)
 
