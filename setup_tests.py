@@ -57,6 +57,36 @@ def check_prerequisites():
         except subprocess.TimeoutExpired:
             print(f"⚠️  {tool} timeout")
     
+    # Check Rust (for userspace development)
+    try:
+        result = subprocess.run(['rustc', '--version'], 
+                              capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            version = result.stdout.split('\n')[0]
+            print("✅ Rust found:", version)
+        else:
+            print("⚠️  Rust not working properly")
+    except FileNotFoundError:
+        print("ℹ️  Rust not found (optional for userspace development)")
+        print("   Install from: https://rustup.rs/")
+    except subprocess.TimeoutExpired:
+        print("⚠️  Rust timeout")
+    
+    # Check Python packages for educational tools
+    try:
+        import matplotlib
+        print("✅ Matplotlib found (for visualizations)")
+    except ImportError:
+        print("ℹ️  Matplotlib not found (optional for comparisons)")
+        print("   Install with: pip install matplotlib")
+    
+    try:
+        import numpy
+        print("✅ NumPy found (for analysis)")
+    except ImportError:
+        print("ℹ️  NumPy not found (optional for analysis)")
+        print("   Install with: pip install numpy")
+    
     return True
 
 def create_test_directories():
