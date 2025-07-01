@@ -1,0 +1,14 @@
+[package]
+name = "hello"
+version = "0.1.0"
+edition = "2021"
+authors = ["MTOS Project"]
+description = "Hello World userspace application for MTOS"
+
+[dependencies]
+mtos-runtime = { path = "../runtime" }
+heapless = "0.7"
+
+[[bin]]
+name = "hello"
+path = "src/main.rs"

@@ -28,8 +28,21 @@ class QEMUTestRunner:
         if extra_args is None:
             extra_args = []
             
+        # Check if image file exists
+        if not os.path.exists(self.os_image_path):
+            print(f"Error: OS image not found: {self.os_image_path}")
+            return False
+            
+        # Import test config for platform-specific QEMU binary
+        try:
+            from .test_config import TestConfig
+            qemu_binary = TestConfig.get_qemu_binary()
+        except ImportError:
+            # Fallback to default
+            qemu_binary = 'qemu-system-i386'
+            
         cmd = [
-            'qemu-system-i386',
+            qemu_binary,
             '-drive', f'file={self.os_image_path},index=0,if=floppy,format=raw',
             '-serial', 'stdio',
             '-display', 'none',

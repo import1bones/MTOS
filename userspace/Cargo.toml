@@ -1,0 +1,31 @@
+[workspace]
+members = [
+    "hello",
+    "calculator",
+    "shell"
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["MTOS Project"]
+license = "MIT"
+
+[workspace.dependencies]
+# Core dependencies for userspace apps
+no-std-compat = "0.4"
+heapless = "0.7"
+nb = "1.0"
+
+# Custom MTOS runtime
+mtos-runtime = { path = "runtime" }
+
+[profile.release]
+panic = "abort"
+lto = true
+codegen-units = 1
+opt-level = "z"  # Optimize for size
+
+[profile.dev]
+panic = "abort"
+opt-level = 1

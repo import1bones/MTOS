@@ -1,1 +1,471 @@
-*.[oa]
+# MTOS Multi-Platform Build System - Git Ignore File
+# ===================================================
+
+# ============================================================================
+# Build Artifacts
+# ============================================================================
+
+# CMake build directories
+build/
+builds/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+install_manifest.txt
+Makefile
+
+# Make build artifacts
+*.o
+*.obj
+*.elf
+*.bin
+*.img
+*.iso
+*.map
+*.lst
+*.a
+
+# Cross-compilation artifacts
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Kernel and bootloader binaries
+bootloader.bin
+bootloader.elf
+kernel.bin
+kernel.elf
+mtos.img
+mtos.iso
+
+# Linker outputs
+*.lds.out
+
+# ============================================================================
+# Language-Specific Files
+# ============================================================================
+
+# C/C++ artifacts
+*.i
+*.s
+*.su
+*.idb
+*.pdb
+*.ilk
+
+# Assembly artifacts
+*.sym
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Python virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Rust artifacts
+userspace/target/
+userspace/Cargo.lock
+userspace/*/target/
+*.rlib
+
+# ============================================================================
+# IDE and Editor Files
+# ============================================================================
+
+# Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Visual Studio
+.vs/
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+
+# CLion / IntelliJ
+.idea/
+*.iml
+*.iws
+
+# Vim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Atom
+.atom/
+
+# Eclipse
+.metadata
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+.recommenders
+
+# ============================================================================
+# Platform-Specific Files
+# ============================================================================
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ============================================================================
+# Development and Testing
+# ============================================================================
+
+# Test results and coverage
+.coverage
+.pytest_cache/
+coverage.xml
+*.cover
+.hypothesis/
+.tox/
+.nox/
+
+# QEMU files
+*.qcow2
+*.vmdk
+qemu.log
+
+# GDB files
+.gdb_history
+gdb.txt
+
+# Profiling
+*.prof
+*.out
+
+# Valgrind
+*.valgrind
+
+# Static analysis
+cppcheck.xml
+scan-build/
+
+# ============================================================================
+# Documentation
+# ============================================================================
+
+# Generated documentation
+docs/_build/
+docs/html/
+docs/latex/
+docs/xml/
+site/
+
+# Doxygen
+html/
+latex/
+man/
+rtf/
+
+# Sphinx
+_build/
+_static/
+_templates/
+
+# ============================================================================
+# Package Management
+# ============================================================================
+
+# npm (if any JavaScript tools are used)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Cargo (Rust)
+Cargo.lock
+target/
+
+# ============================================================================
+# Deployment and Containers
+# ============================================================================
+
+# Docker
+.dockerignore
+
+# Vagrant
+.vagrant/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Kubernetes
+*.kubeconfig
+
+# ============================================================================
+# Security and Credentials
+# ============================================================================
+
+# API keys and secrets
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+secrets.txt
+*.pem
+*.key
+*.crt
+*.p12
+
+# ============================================================================
+# Logs and Temporary Files
+# ============================================================================
+
+# Log files
+*.log
+logs/
+*.log.*
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+.temp/
+
+# Backup files
+*.backup
+*.orig
+
+# ============================================================================
+# MTOS-Specific Ignores
+# ============================================================================
+
+# Build configuration cache
+.build_config
+build_cache/
+
+# Test outputs
+test_results/
+test_reports/
+*.test.log
+
+# Benchmark results
+benchmark_results/
+performance_reports/
+
+# Educational materials (generated)
+reports/
+student_reports/
+
+# Component build artifacts
+kernel/memory/*.component
+kernel/scheduler/*.component
+kernel/ipc/*.component
+
+# Installation directories
+install/
+staging/
+
+# Package outputs
+packages/
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.zip
+*.deb
+*.rpm
+*.pkg
+*.dmg
+
+# Cross-compilation outputs
+cross-*/
+
+# Emulation state
+*.savestate
+qemu_state/
+
+# ============================================================================
+# Custom Local Files
+# ============================================================================
+
+# Local configuration
+local.mk
+local.cmake
+.local/
+
+# Personal notes and TODO files
+TODO.personal
+NOTES.personal
+*.personal
+
+# Experimental code
+experimental/
+playground/
+scratch/
+
+# Local scripts
+local_build.sh
+my_*.sh
+personal_*.py
+
+# ============================================================================
+# CI/CD Artifacts
+# ============================================================================
+
+# GitHub Actions
+.github/workflows/secrets/
+
+# Jenkins
+.jenkins/
+
+# CircleCI
+.circleci/config.local.yml
+
+# GitLab CI
+.gitlab-ci.local.yml
+
+# Build matrices
+build_matrix_results/
+
+# Artifact storage
+artifacts/
+releases/
+
+# ============================================================================
+# Development Tools Configuration
+# ============================================================================
+
+# ctags
+tags
+TAGS
+
+# cscope
+cscope.files
+cscope.in.out
+cscope.out
+cscope.po.out
+
+# ccls
+.ccls-cache/
+
+# clangd
+.clangd/
+compile_commands.json
+
+# Bear (for compile_commands.json generation)
+.bear/
+
+# Include what you use
+*.iwyu
+
+# ============================================================================
+# Final Catch-All Patterns
+# ============================================================================
+
+# Any file ending with these extensions in any directory
+**/*.cache
+**/*.lock
+**/*.pid
+
+# Any directory named these anywhere in the project
+**/node_modules/
+**/vendor/
+**/.git/
+**/.svn/
+**/.hg/
+
+# Hidden files that might be created by various tools
+.*
+!.gitignore
+!.gitattributes
+!.github/
+!.editorconfig
+!.clang-format

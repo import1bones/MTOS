@@ -1,0 +1,14 @@
+[package]
+name = "calculator"
+version = "0.1.0"
+edition = "2021"
+authors = ["MTOS Project"]
+description = "Calculator userspace application for MTOS"
+
+[dependencies]
+mtos-runtime = { path = "../runtime" }
+heapless = "0.7"
+
+[[bin]]
+name = "calculator"
+path = "src/main.rs"

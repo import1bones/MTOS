@@ -1,0 +1,535 @@
+name: MTOS Multi-Platform CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+env:
+  QEMU_VERSION: 7.0.0
+
+jobs:
+  # ============================================================================
+  # BUILD MATRIX - Test all combinations
+  # ============================================================================
+  build-matrix:
+    name: Build ${{ matrix.allocator }}+${{ matrix.scheduler }}+${{ matrix.ipc }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        allocator: [bitmap, buddy]
+        scheduler: [round_robin, priority]
+        ipc: [message_queue, shared_memory]
+        build_type: [Debug, Release]
+        exclude:
+          # Reduce matrix size - only test some combinations on non-Linux
+          - os: windows-latest
+            build_type: Debug
+          - os: macos-latest
+            build_type: Debug
+          - os: windows-latest
+            allocator: buddy
+          - os: macos-latest
+            allocator: buddy
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+        components: rustfmt, clippy
+        
+    - name: Add Rust targets
+      run: |
+        rustup target add i686-unknown-linux-gnu
+        rustup target add x86_64-unknown-linux-gnu
+        
+    - name: Cache Python packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        
+    - name: Cache Rust packages
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          userspace/target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install matplotlib numpy pytest coverage
+        
+    - name: Setup Linux build environment
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-multilib cmake make ninja-build qemu-system-x86
+        
+    - name: Setup Windows build environment
+      if: runner.os == 'Windows'
+      run: |
+        choco install cmake ninja qemu
+        
+    - name: Setup macOS build environment  
+      if: runner.os == 'macOS'
+      run: |
+        brew install cmake ninja qemu
+        
+    - name: Configure build
+      run: |
+        python build.py --configure --target-arch i386 --build-type ${{ matrix.build_type }} --allocator ${{ matrix.allocator }} --scheduler ${{ matrix.scheduler }} --ipc ${{ matrix.ipc }}
+        
+    - name: Build MTOS
+      run: |
+        python build.py --build
+        
+    - name: Run tests
+      if: runner.os == 'Linux'  # Only run emulation tests on Linux
+      run: |
+        python build.py --test
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: mtos-${{ matrix.os }}-${{ matrix.allocator }}-${{ matrix.scheduler }}-${{ matrix.ipc }}-${{ matrix.build_type }}
+        path: |
+          build/mtos.img
+          build/*.bin
+          build/*.elf
+          
+  # ============================================================================
+  # CROSS-COMPILATION TESTING
+  # ============================================================================
+  cross-compile:
+    name: Cross-compile for ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        target:
+          - platform: embedded
+            arch: arm
+            toolchain: arm-none-eabi
+          - platform: linux
+            arch: x86_64
+            toolchain: gcc
+            
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup cross-compilation toolchain
+      run: |
+        sudo apt-get update
+        if [ "${{ matrix.target.toolchain }}" = "arm-none-eabi" ]; then
+          sudo apt-get install -y gcc-arm-none-eabi
+        fi
+        sudo apt-get install -y cmake ninja-build gcc-multilib
+        
+    - name: Build for target
+      run: |
+        python build.py --target-platform ${{ matrix.target.platform }} --target-arch ${{ matrix.target.arch }} --build
+        
+    - name: Upload cross-compiled artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: mtos-${{ matrix.target.platform }}-${{ matrix.target.arch }}
+        path: build/
+        
+  # ============================================================================
+  # CONTAINER BUILDS
+  # ============================================================================
+  container-build:
+    name: Container Build and Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      
+    - name: Build development container
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        target: mtos-devel
+        tags: mtos:devel
+        load: true
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Build CI container
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        target: mtos-ci
+        tags: mtos:ci
+        load: true
+        
+    - name: Run CI tests in container
+      run: |
+        docker run --rm mtos:ci ./ci-build.sh
+        
+    - name: Build demo container
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        target: mtos-demo
+        tags: mtos:demo
+        load: true
+        
+    - name: Test demo container
+      run: |
+        docker run --rm mtos:demo ./demo-all.sh
+        
+  # ============================================================================
+  # CODE QUALITY AND ANALYSIS
+  # ============================================================================
+  code-quality:
+    name: Code Quality Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup analysis tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cppcheck clang-format valgrind lcov
+        
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install Python analysis tools
+      run: |
+        pip install black flake8 mypy bandit
+        
+    - name: Run C/C++ static analysis
+      run: |
+        cppcheck --enable=all --xml --xml-version=2 kernel/ 2> cppcheck-report.xml || true
+        
+    - name: Check code formatting
+      run: |
+        find kernel/ -name "*.c" -o -name "*.h" | xargs clang-format --dry-run --Werror
+        
+    - name: Python code quality
+      run: |
+        black --check tests/ build.py
+        flake8 tests/ build.py
+        
+    - name: Security analysis
+      run: |
+        bandit -r tests/ build.py || true
+        
+    - name: Upload analysis results
+      uses: actions/upload-artifact@v3
+      with:
+        name: code-quality-reports
+        path: |
+          cppcheck-report.xml
+          
+  # ============================================================================
+  # DOCUMENTATION GENERATION  
+  # ============================================================================
+  documentation:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup documentation tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y doxygen graphviz cmake
+        
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install Python documentation tools
+      run: |
+        pip install sphinx sphinx-rtd-theme
+        
+    - name: Generate API documentation
+      run: |
+        python build.py --configure --enable-docs
+        cmake --build build --target docs
+        
+    - name: Upload documentation
+      uses: actions/upload-artifact@v3
+      with:
+        name: documentation
+        path: build/docs/
+        
+    - name: Deploy to GitHub Pages
+      if: github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: build/docs/html
+        
+  # ============================================================================
+  # PERFORMANCE BENCHMARKING
+  # ============================================================================
+  benchmark:
+    name: Performance Benchmark
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-multilib cmake qemu-system-x86
+        
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install Python packages
+      run: |
+        pip install matplotlib numpy
+        
+    - name: Run comprehensive benchmarks
+      run: |
+        # Build all configurations
+        for allocator in bitmap buddy; do
+          for scheduler in round_robin priority; do
+            for ipc in message_queue shared_memory; do
+              echo "Benchmarking: $allocator + $scheduler + $ipc"
+              python build.py --clean --allocator $allocator --scheduler $scheduler --ipc $ipc --build
+              python tests/compare_components.py allocators --output "benchmark-$allocator-$scheduler-$ipc.txt" || true
+            done
+          done
+        done
+        
+    - name: Generate benchmark report
+      run: |
+        mkdir -p benchmark-results
+        mv benchmark-*.txt benchmark-results/ || true
+        
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results
+        path: benchmark-results/
+        
+  # ============================================================================
+  # RELEASE PACKAGING
+  # ============================================================================
+  release:
+    name: Create Release Packages
+    runs-on: ubuntu-latest
+    needs: [build-matrix, cross-compile, container-build, code-quality, deployment]
+    if: github.event_name == 'release'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+        
+    - name: Setup build environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-multilib cmake ninja-build
+        
+    - name: Build Rust userspace
+      run: |
+        cd userspace
+        cargo build --release
+        cd ..
+        
+    - name: Build release packages
+      run: |
+        # Build optimized releases for different configurations
+        configurations=(
+          "bitmap round_robin message_queue"
+          "buddy priority shared_memory"
+        )
+        
+        for config in "${configurations[@]}"; do
+          IFS=' ' read -r allocator scheduler ipc <<< "$config"
+          echo "Building release: $allocator + $scheduler + $ipc"
+          
+          python build.py --clean --build-type Release --allocator $allocator --scheduler $scheduler --ipc $ipc --package
+          
+          # Rename package
+          mv build/MTOS-*.tar.gz "MTOS-${allocator}-${scheduler}-${ipc}.tar.gz" || true
+        done
+        
+    - name: Create educational package
+      run: |
+        # Create comprehensive educational package
+        mkdir -p mtos-educational
+        cp -r kernel/ include/ tests/ docs/ userspace/ mtos-educational/
+        cp README.md STUDENT_GUIDE.md README_TEST_FRAMEWORK.md mtos-educational/
+        cp build.py deploy.py CMakeLists.txt Dockerfile mtos-educational/
+        tar -czf MTOS-Educational-Complete.tar.gz mtos-educational/
+        
+    - name: Download deployment packages
+      uses: actions/download-artifact@v3
+      with:
+        name: mtos-deployment-packages
+        path: deployment-packages/
+        
+    - name: Create deployment archive
+      run: |
+        tar -czf MTOS-Multi-Platform-Deployment.tar.gz deployment-packages/
+        
+    - name: Upload release assets
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          MTOS-*.tar.gz
+        body: |
+          ## MTOS Release ${{ github.ref_name }}
+          
+          Educational Operating System with Virtual Interface System
+          
+          ### What's Included
+          - **MTOS-Educational-Complete.tar.gz**: Complete source with all components
+          - **MTOS-Multi-Platform-Deployment.tar.gz**: Pre-built binaries for all platforms
+          - **MTOS-{allocator}-{scheduler}-{ipc}.tar.gz**: Specific component combinations
+          
+          ### Features
+          - 🔌 Virtual Interface System for swappable components
+          - 🦀 Rust userspace applications
+          - 🧪 Comprehensive testing framework
+          - 📚 Educational tools and documentation
+          - 🌍 Multi-platform support (Windows, Linux, macOS, embedded)
+          - 🐳 Container-based development environment
+          
+          ### Quick Start
+          1. Download MTOS-Educational-Complete.tar.gz
+          2. Extract and run: `python build.py --build`
+          3. Test: `python build.py --test`
+          4. Explore: Check the STUDENT_GUIDE.md
+          
+          See the documentation for detailed instructions!
+          
+          ### Included Packages
+          - **MTOS-bitmap-round_robin-message_queue.tar.gz** - Basic configuration
+          - **MTOS-buddy-priority-shared_memory.tar.gz** - Advanced configuration  
+          - **MTOS-Educational-Complete.tar.gz** - Complete source with all implementations
+          
+          ### Quick Start
+          ```bash
+          tar -xzf MTOS-Educational-Complete.tar.gz
+          cd mtos-educational
+          python build.py --all
+          ```
+          
+          ### Documentation
+          - [Student Guide](STUDENT_GUIDE.md)
+          - [Build System](README.md)
+          - [Test Framework](README_TEST_FRAMEWORK.md)
+          
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+  # ============================================================================
+  # DEPLOYMENT - Multi-platform deployment with userspace
+  # ============================================================================
+  deployment:
+    name: Multi-Platform Deployment
+    runs-on: ubuntu-latest
+    needs: [build-matrix]
+    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+        components: rustfmt, clippy
+        
+    - name: Add Rust cross-compilation targets
+      run: |
+        rustup target add i686-unknown-linux-gnu
+        rustup target add x86_64-unknown-linux-gnu
+        rustup target add armv7-unknown-linux-gnueabi
+        rustup target add aarch64-unknown-linux-gnu
+        
+    - name: Setup cross-compilation toolchains
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          gcc-multilib \
+          gcc-arm-none-eabi \
+          gcc-aarch64-linux-gnu \
+          cmake ninja-build \
+          qemu-system-x86
+        
+    - name: Deploy to all targets
+      run: |
+        python deploy.py --all --build-type Release
+        
+    - name: Upload deployment artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: mtos-deployment-packages
+        path: |
+          packages/*
+          deploy/*/
+        retention-days: 30
+        
+    - name: Create deployment summary
+      run: |
+        echo "## Multi-Platform Deployment Summary" > deployment-summary.md
+        echo "" >> deployment-summary.md
+        echo "### Successful Deployments" >> deployment-summary.md
+        ls packages/ | sed 's/^/- /' >> deployment-summary.md
+        echo "" >> deployment-summary.md
+        echo "### Target Architectures" >> deployment-summary.md
+        python deploy.py --list-targets | tail -n +2 >> deployment-summary.md
+        
+    - name: Upload deployment summary
+      uses: actions/upload-artifact@v3
+      with:
+        name: deployment-summary
+        path: deployment-summary.md

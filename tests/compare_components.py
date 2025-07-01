@@ -7,10 +7,20 @@ Educational tool for comparing different OS algorithm implementations
 import subprocess
 import time
 import json
-import matplotlib.pyplot as plt
-import numpy as np
+import sys
+import os
 from typing import Dict, List, Any
 import argparse
+
+# Try to import matplotlib, but make it optional
+try:
+    import matplotlib.pyplot as plt
+    import numpy as np
+    HAS_MATPLOTLIB = True
+except ImportError:
+    HAS_MATPLOTLIB = False
+    print("⚠️  Warning: matplotlib not available. Visualizations will be disabled.")
+    print("   Install with: pip install matplotlib numpy")
 
 class ComponentBenchmark:
     """Base class for component benchmarking."""
@@ -129,6 +139,10 @@ class AllocatorBenchmark(ComponentBenchmark):
     
     def visualize_results(self, results: Dict[str, Dict[str, Any]]):
         """Create visualizations for allocator comparison."""
+        if not HAS_MATPLOTLIB:
+            print("⚠️  Matplotlib not available. Skipping visualization.")
+            return
+            
         allocators = list(results.keys())
         
         # Performance comparison
@@ -458,34 +472,59 @@ def main():
     config = component_configs[args.component]
     benchmark = config['benchmark_class']()
     
-    print(f"Comparing {args.component}...")
-    results = benchmark.compare_components(
-        config['components'], 
-        f"build/mtos_{args.component}"
-    )
+    print(f"🔍 Comparing {args.component}...")
+    print("=" * 40)
     
-    # Generate report
-    report = benchmark.generate_report(results)
-    print("\n" + report)
+    # Check if build directory exists
+    build_dir = "build"
+    if not os.path.exists(build_dir):
+        print("⚠️  Build directory not found.")
+        print("📝 Please build MTOS first:")
+        print("   1. python build.py --build")
+        print("   2. OR make all")
+        return 1
     
-    # Save report to file
-    with open(args.output, 'w') as f:
-        f.write(report)
-    print(f"\nReport saved to {args.output}")
+    try:
+        results = benchmark.compare_components(
+            config['components'], 
+            f"build/mtos_{args.component}"
+        )
+        
+        # Generate report
+        report = benchmark.generate_report(results)
+        print("\n" + report)
+        
+        # Save report to file
+        with open(args.output, 'w') as f:
+            f.write(report)
+        print(f"\n📄 Report saved to {args.output}")
+        
+        return 0
+        
+    except Exception as e:
+        print(f"❌ Comparison failed: {e}")
+        print("\n🔧 Troubleshooting:")
+        print("  • Ensure MTOS is built successfully")
+        print("  • Check that QEMU is installed")
+        print("  • Verify all component implementations exist")
+        return 1
     
     # Generate visualizations if requested
     if args.visualize:
-        try:
-            benchmark.visualize_results(results)
-            print("Visualizations generated and saved as PNG files")
-        except ImportError:
-            print("Matplotlib not available. Install with: pip install matplotlib")
+        if HAS_MATPLOTLIB:
+            try:
+                benchmark.visualize_results(results)
+                print("📊 Visualizations generated and saved as PNG files")
+            except Exception as e:
+                print(f"⚠️  Visualization error: {e}")
+        else:
+            print("📊 Matplotlib not available. Install with: pip install matplotlib numpy")
     
     # Save results as JSON for further analysis
     json_file = f"{args.component}_results.json"
     with open(json_file, 'w') as f:
         json.dump(results, f, indent=2)
-    print(f"Raw results saved to {json_file}")
+    print(f"📄 Raw results saved to {json_file}")
 
 
 if __name__ == "__main__":
