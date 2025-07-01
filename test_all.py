@@ -12,7 +12,7 @@ from pathlib import Path
 
 def run_test_validation():
     """Run the test validation script."""
-    print("🔍 Validating test framework...")
+    print("[INFO] Validating test framework...")
     
     tests_dir = Path(__file__).parent / "tests"
     validation_script = tests_dir / "validate_tests.py"
@@ -29,12 +29,12 @@ def run_test_validation():
             print(f"❌ Failed to run test validation: {e}")
             return False
     else:
-        print("⚠️  Test validation script not found, skipping...")
+        print("[WARNING] Test validation script not found, skipping...")
         return True
 
 def build_mtos():
     """Build MTOS with default configuration."""
-    print("🔨 Building MTOS...")
+    print("[BUILD] Building MTOS...")
     
     # Try modern build system first
     if os.path.exists("build.py"):
@@ -46,7 +46,7 @@ def build_mtos():
                 print("Errors:", result.stderr)
             return result.returncode == 0
         except Exception as e:
-            print(f"❌ Modern build failed: {e}")
+            print(f"[ERROR] Modern build failed: {e}")
     
     # Fallback to make
     if os.path.exists("Makefile"):
