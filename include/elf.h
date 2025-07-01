@@ -1,6 +1,8 @@
 #ifndef MOS_INCLUDE_ELF_H
 #define MOS_INCLUDE_ELF_H
 
+#include "types.h"
+
 #define ELF_MAGIC 0x464C457FU
 
 //std
@@ -21,7 +23,7 @@ struct ELF
    uint16_t e_shentsize;
    uint16_t e_shnum;
    uint16_t e_shstrndx;
-}
+};
 //std
 struct Proghdr
 {
@@ -33,7 +35,7 @@ struct Proghdr
     uint32_t p_memsz;
     uint32_t p_flags;
     uint32_t aligns;
-}
+};
 //std
 struct Secthdr
 {
@@ -47,7 +49,7 @@ struct Secthdr
    uint32_t sh_info;
    uint32_t sh_addralign;
    uint32_t sh_entsize;
-}
+};
 
 #define ELF_PROG_LOAD 1
 

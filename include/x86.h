@@ -1,7 +1,7 @@
 #ifndef MOS_INCLUDE_X86_H
 #define MOS_INCLUDE_X86_H
 
-#include<include/types.h>
+#include "types.h"
 
 static inline void breakpoint(void)
 {

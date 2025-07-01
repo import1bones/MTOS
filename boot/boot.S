@@ -1,4 +1,4 @@
-#include <inc/mmu.h>
+#include "../include/mmu.h"
 .set PROT_MODE_CSEG, 0x8
 #kernel code segment selector
 .set PROT_MODE_DSEG, 0x10

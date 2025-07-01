@@ -1,0 +1,141 @@
+name: MTOS Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.8'
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y qemu-system-x86 gcc-multilib binutils make
+        python -m pip install --upgrade pip
+    
+    - name: Verify setup
+      run: |
+        python setup_tests.py
+        qemu-system-i386 --version
+        gcc --version
+    
+    - name: Build MTOS
+      run: |
+        make clean
+        make all
+    
+    - name: Run tests
+      run: |
+        make test
+    
+    - name: Upload test logs
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-logs
+        path: |
+          *.log
+          test_output/
+          test_logs/
+        retention-days: 7
+
+  test-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.8'
+    
+    - name: Install QEMU
+      run: |
+        choco install qemu --version=7.2.0
+        
+    - name: Install MinGW
+      run: |
+        choco install mingw
+        
+    - name: Verify setup
+      run: |
+        python setup_tests.py
+        qemu-system-i386.exe --version
+        gcc --version
+      shell: powershell
+    
+    - name: Build MTOS
+      run: |
+        make clean
+        make all
+      shell: powershell
+    
+    - name: Run tests
+      run: |
+        make test
+      shell: powershell
+    
+    - name: Upload test logs
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-logs-windows
+        path: |
+          *.log
+          test_output/
+          test_logs/
+        retention-days: 7
+
+  test-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.8'
+    
+    - name: Install dependencies
+      run: |
+        brew install qemu gcc make
+        python -m pip install --upgrade pip
+    
+    - name: Verify setup
+      run: |
+        python setup_tests.py
+        qemu-system-i386 --version
+        gcc --version
+    
+    - name: Build MTOS
+      run: |
+        make clean
+        make all
+    
+    - name: Run tests
+      run: |
+        make test
+    
+    - name: Upload test logs
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-logs-macos
+        path: |
+          *.log
+          test_output/
+          test_logs/
+        retention-days: 7

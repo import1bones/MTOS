@@ -1,5 +1,6 @@
-#include<include/elf.h>
-#include<include/x86.h>
+#include "../include/types.h"
+#include "../include/elf.h"
+#include "../include/x86.h"
 
 #define SECTION_SIZE 512
 #define ELFHDR ((struct ELF*) 0x10000)
@@ -9,14 +10,14 @@ void read_segment(uint32_t, uint32_t, uint32_t);
 
 void bootmain(void)
 {
-    struct Proghdr *ph, eph;
+    struct Proghdr *ph, *eph;
     read_segment((uint32_t) ELFHDR, SECTION_SIZE * 8, 0);
     if(ELFHDR->e_magic!=ELF_MAGIC)
     {
         goto bad;
     }
     ph = (struct Proghdr*) ((uint8_t*) ELFHDR + ELFHDR->e_phoff);
-    eph=ph+ELFHDR->e_phnum;
+    eph = ph + ELFHDR->e_phnum;
     while(ph < eph)
     {
         read_segment(ph->p_pa, ph->p_memsz, ph->p_offset);
@@ -42,7 +43,7 @@ void read_segment(uint32_t pa, uint32_t count, uint32_t offset)
     while(pa<end_pa)
     {
         read_section((uint8_t*) pa, offset);
-        pa + = SECTION_SIZE;
+        pa += SECTION_SIZE;
         offset++;
     }
 }
